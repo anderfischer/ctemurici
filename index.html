@@ -358,6 +358,47 @@
             width: 80px;
         }
         
+        .separator-input {
+            width: 50px;
+            text-align: center;
+        }
+        
+        .columns-container {
+            margin-top: 20px;
+        }
+        
+        .column-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .column-input {
+            width: 60px;
+        }
+        
+        .remove-column-btn {
+            background: none;
+            border: none;
+            color: var(--error-color);
+            cursor: pointer;
+            font-size: 18px;
+        }
+        
+        .add-column-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 8px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
         @media (max-width: 768px) {
             .container {
                 margin: 10px auto;
@@ -389,6 +430,11 @@
             .config-input {
                 width: 100%;
             }
+            
+            .column-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
@@ -418,13 +464,22 @@
                             <input type="number" id="start-row" class="config-input" value="3" min="1">
                         </div>
                         <div class="config-row">
-                            <label class="config-label">Coluna CTE:</label>
-                            <input type="text" id="cte-col" class="config-input" value="E" placeholder="Ex: E">
+                            <label class="config-label">Separador:</label>
+                            <input type="text" id="separator" class="config-input separator-input" value="\t" placeholder="Ex: \t ou ,">
                         </div>
-                        <div class="config-row">
-                            <label class="config-label">Coluna FRETE:</label>
-                            <input type="text" id="frete-col" class="config-input" value="D" placeholder="Ex: D">
+                    </div>
+                    
+                    <div class="columns-container">
+                        <h4>Colunas para exportar:</h4>
+                        <div id="columns-list">
+                            <div class="column-item">
+                                <input type="text" class="config-input column-input" value="E" placeholder="Ex: A">
+                                <button class="remove-column-btn" onclick="removeColumn(this)"><i class="fas fa-times"></i></button>
+                            </div>
                         </div>
+                        <button class="add-column-btn" onclick="addColumn()">
+                            <i class="fas fa-plus"></i> Adicionar Coluna
+                        </button>
                     </div>
                     
                     <div class="file-upload">
@@ -459,14 +514,14 @@
                     <h3><i class="fas fa-info-circle"></i> Instruções para Conversão Excel→TXT</h3>
                     <ol>
                         <li>Configure a linha inicial e as colunas que deseja extrair</li>
+                        <li>Adicione quantas colunas precisar</li>
+                        <li>Defina o separador que será usado no arquivo TXT (padrão: \t para tabulação)</li>
                         <li>Selecione um arquivo .xlsx/.xls</li>
                         <li>O sistema irá extrair automaticamente as colunas especificadas</li>
-                        <li>Linhas duplicadas serão removidas automaticamente</li>
                         <li>Clique em <b>"Baixar Arquivo TXT"</b> para salvar o resultado</li>
-                        <li>Clique em <b>"Baixar Duplicatas"</b> para salvar a lista de linhas duplicadas</li>
                         <li>Após baixar o arquivo use a aba <b>"TXT para JSON"</b> para gerar o arquivo para emissão</li>
                     </ol>
-                    <p><strong>Formato de saída:</strong> CTE [tab] FRETE (sem cabeçalho, sem duplicatas) em formato TXT</p>
+                    <p><strong>Dica:</strong> Use \t para tabulação, , para CSV, | para pipe, ou qualquer outro caractere como separador</p>
                 </div>
             </div>
             
@@ -529,6 +584,27 @@
     </div>
 
     <script>
+        // Funções globais para manipulação de colunas
+        function addColumn() {
+            const columnsList = document.getElementById('columns-list');
+            const newColumn = document.createElement('div');
+            newColumn.className = 'column-item';
+            newColumn.innerHTML = `
+                <input type="text" class="config-input column-input" placeholder="Ex: A">
+                <button class="remove-column-btn" onclick="removeColumn(this)"><i class="fas fa-times"></i></button>
+            `;
+            columnsList.appendChild(newColumn);
+        }
+        
+        function removeColumn(button) {
+            const columnsList = document.getElementById('columns-list');
+            if (columnsList.children.length > 1) {
+                button.parentElement.remove();
+            } else {
+                alert('Você precisa ter pelo menos uma coluna configurada.');
+            }
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
             // Tab functionality
             const tabs = document.querySelectorAll('.tab');
@@ -555,8 +631,7 @@
             const downloadDuplicatesBtn = document.getElementById('download-duplicates-btn');
             const clearExcelBtn = document.getElementById('clear-excel-btn');
             const startRowInput = document.getElementById('start-row');
-            const cteColInput = document.getElementById('cte-col');
-            const freteColInput = document.getElementById('frete-col');
+            const separatorInput = document.getElementById('separator');
             
             let processedExcelData = "";
             let duplicatesData = [];
@@ -604,12 +679,21 @@
                         
                         // Get configuration values
                         const startRow = parseInt(startRowInput.value) || 3;
-                        const cteCol = cteColInput.value.trim().toUpperCase() || 'E';
-                        const freteCol = freteColInput.value.trim().toUpperCase() || 'D';
+                        const separator = separatorInput.value.replace(/\\t/g, '\t'); // Replace \t with actual tab
                         
-                        // Convert column letters to 0-based indices
-                        const CTE_COL = letterToColumn(cteCol);
-                        const FRETE_COL = letterToColumn(freteCol);
+                        // Get columns to export
+                        const columnsToExport = [];
+                        const columnInputs = document.querySelectorAll('.column-input');
+                        columnInputs.forEach(input => {
+                            const colLetter = input.value.trim().toUpperCase();
+                            if (colLetter) {
+                                columnsToExport.push(letterToColumn(colLetter));
+                            }
+                        });
+                        
+                        if (columnsToExport.length === 0) {
+                            throw new Error('Nenhuma coluna válida configurada para exportação.');
+                        }
                         
                         // Verify minimum rows
                         if (jsonData.length < startRow) {
@@ -625,19 +709,25 @@
                         duplicatesData = [];
                         for (let i = startRow - 1; i < jsonData.length; i++) {
                             const row = jsonData[i];
-                            const cte = row[CTE_COL] !== undefined ? String(row[CTE_COL]).trim() : "";
-                            const frete = row[FRETE_COL] !== undefined ? String(row[FRETE_COL]).trim() : "";
+                            let lineValues = [];
+                            let lineKeyParts = [];
                             
-                            // Process only rows with both values
-                            if (cte && frete) {
-                                const lineKey = `${cte}_${frete}`;
+                            // Get values from all specified columns
+                            for (const colIndex of columnsToExport) {
+                                const value = row[colIndex] !== undefined ? String(row[colIndex]).trim() : "";
+                                lineValues.push(value);
+                                lineKeyParts.push(value);
+                            }
+                            
+                            // Skip empty lines
+                            if (lineValues.some(v => v)) {
+                                const lineKey = lineKeyParts.join('_');
                                 
                                 if (processedLines[lineKey]) {
                                     // Register duplicate
                                     if (!foundDuplicates[lineKey]) {
                                         foundDuplicates[lineKey] = {
-                                            cte: cte,
-                                            frete: frete,
+                                            values: lineValues,
                                             count: 1,
                                             lines: [i + 1] // +1 for Excel row number
                                         };
@@ -646,8 +736,8 @@
                                         foundDuplicates[lineKey].lines.push(i + 1);
                                     }
                                 } else {
-                                    // Add unique line to result (CTE first, then FRETE)
-                                    processedExcelData += `${cte}\t${frete}\n`;
+                                    // Add unique line to result
+                                    processedExcelData += lineValues.join(separator) + '\n';
                                     processedLines[lineKey] = true;
                                 }
                             }
@@ -662,7 +752,7 @@
                             
                             duplicateKeys.forEach(key => {
                                 const dup = foundDuplicates[key];
-                                const duplicateInfo = `CTE: ${dup.cte} | FRETE: ${dup.frete} | Ocorrências: ${dup.count}x | Linhas: ${dup.lines.join(', ')}`;
+                                const duplicateInfo = `Valores: ${dup.values.join(' | ')} | Ocorrências: ${dup.count}x | Linhas: ${dup.lines.join(', ')}`;
                                 
                                 // Add to on-screen list
                                 const div = document.createElement('div');
@@ -721,7 +811,7 @@
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = 'CTE_FRETE.txt';
+                    a.download = 'dados_exportados.txt';
                     document.body.appendChild(a);
                     a.click();
                     
@@ -748,7 +838,7 @@
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = 'DUPLICATAS_CTE_FRETE.txt';
+                    a.download = 'duplicatas_encontradas.txt';
                     document.body.appendChild(a);
                     a.click();
                     
