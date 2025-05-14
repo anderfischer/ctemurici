@@ -6,6 +6,7 @@
     <title>Processador de CT-e Murici | Conversor de Arquivos</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary-color: #3498db;
@@ -89,6 +90,33 @@
             color: var(--primary-color);
         }
         
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e0e6ed;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: var(--transition);
+        }
+        
+        .tab.active {
+            border-bottom: 3px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
         .radio-group {
             display: flex;
             flex-wrap: wrap;
@@ -164,7 +192,7 @@
             color: #7f8c8d;
         }
         
-        #status {
+        .status {
             margin: 25px 0;
             padding: 15px 20px;
             border-radius: var(--border-radius);
@@ -173,7 +201,7 @@
             font-weight: 500;
         }
         
-        #status i {
+        .status i {
             margin-right: 10px;
             font-size: 20px;
         }
@@ -188,6 +216,37 @@
             background-color: rgba(231, 76, 60, 0.1);
             color: var(--error-color);
             border-left: 4px solid var(--error-color);
+        }
+        
+        .info {
+            background-color: rgba(52, 152, 219, 0.1);
+            color: var(--primary-color);
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .warning {
+            background-color: rgba(243, 156, 18, 0.1);
+            color: var(--warning-color);
+            border-left: 4px solid var(--warning-color);
+        }
+        
+        .duplicates-container {
+            margin-top: 20px;
+            border: 1px solid #eee;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .duplicate-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            font-family: monospace;
+        }
+        
+        .duplicate-item:last-child {
+            border-bottom: none;
         }
         
         .info-box {
@@ -236,6 +295,69 @@
             border-top: 1px solid #e0e6ed;
         }
         
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .action-button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .action-button i {
+            margin-right: 8px;
+        }
+        
+        .primary-button {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .primary-button:hover {
+            background-color: var(--secondary-color);
+        }
+        
+        .secondary-button {
+            background-color: var(--light-color);
+            color: var(--dark-color);
+        }
+        
+        .secondary-button:hover {
+            background-color: #d5dbdb;
+        }
+        
+        .config-group {
+            margin-bottom: 20px;
+        }
+        
+        .config-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        
+        .config-label {
+            min-width: 120px;
+            font-weight: 500;
+        }
+        
+        .config-input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            width: 80px;
+        }
+        
         @media (max-width: 768px) {
             .container {
                 margin: 10px auto;
@@ -253,6 +375,20 @@
             .radio-option {
                 flex: 1 1 auto;
             }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .config-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            
+            .config-input {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -260,105 +396,421 @@
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-file-alt"></i> Processador de CT-e Murici</h1>
-            <p>Conversor de arquivos TXT para formato JSON</p>
         </div>
         
         <div class="content">
-            <div class="card">
-                <div class="card-title">
-                    <i class="fas fa-cog"></i> Configurações do Ambiente
+            <div class="tab-container">
+                <div class="tab active" data-tab="excel-to-txt">Excel para TXT</div>
+                <div class="tab" data-tab="txt-to-json">TXT para JSON</div>
+            </div>
+            
+            <!-- Tab Excel para TXT -->
+            <div id="excel-to-txt" class="tab-content active">
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fas fa-file-excel"></i> Conversor Excel para TXT
+                    </div>
+                    <p>Converta arquivos Excel (.xlsx) para TXT extraindo as colunas selecionadas a partir da linha especificada</p>
+                    
+                    <div class="config-group">
+                        <div class="config-row">
+                            <label class="config-label">Linha inicial:</label>
+                            <input type="number" id="start-row" class="config-input" value="3" min="1">
+                        </div>
+                        <div class="config-row">
+                            <label class="config-label">Coluna CTE:</label>
+                            <input type="text" id="cte-col" class="config-input" value="E" placeholder="Ex: E">
+                        </div>
+                        <div class="config-row">
+                            <label class="config-label">Coluna FRETE:</label>
+                            <input type="text" id="frete-col" class="config-input" value="D" placeholder="Ex: D">
+                        </div>
+                    </div>
+                    
+                    <div class="file-upload">
+                        <input type="file" id="excel-file" class="file-upload-input" accept=".xlsx, .xls">
+                        <label for="excel-file" class="file-upload-label">
+                            <i class="fas fa-file-excel"></i> Selecionar Arquivo Excel
+                        </label>
+                        <div id="excel-file-name" class="file-name">Nenhum arquivo selecionado</div>
+                    </div>
+                    
+                    <div id="excel-status" class="status"></div>
+                    
+                    <div id="duplicates-container" class="duplicates-container" style="display: none;">
+                        <h4><i class="fas fa-exclamation-triangle"></i> Linhas Duplicadas Encontradas:</h4>
+                        <div id="duplicates-list"></div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button id="download-txt-btn" class="action-button primary-button" style="display: none;">
+                            <i class="fas fa-download"></i> Baixar Arquivo TXT
+                        </button>
+                        <button id="download-duplicates-btn" class="action-button warning-button" style="display: none; background-color: var(--warning-color); color: white;">
+                            <i class="fas fa-file-download"></i> Baixar Duplicatas
+                        </button>
+                        <button id="clear-excel-btn" class="action-button secondary-button">
+                            <i class="fas fa-trash-alt"></i> Limpar
+                        </button>
+                    </div>
                 </div>
-                <p>Selecione o ambiente que deseja utilizar:</p>
                 
-                <div class="radio-group">
-                    <div class="radio-option">
-                        <input type="radio" id="producao" name="ambiente" value="producao" checked>
-                        <label for="producao">
-                            <i class="fas fa-server"></i> Produção
-                        </label>
-                    </div>
-                    <div class="radio-option">
-                        <input type="radio" id="homologacao" name="ambiente" value="homologacao">
-                        <label for="homologacao">
-                            <i class="fas fa-flask"></i> Homologação
-                        </label>
-                    </div>
+                <div class="info-box">
+                    <h3><i class="fas fa-info-circle"></i> Instruções para Conversão Excel→TXT</h3>
+                    <ol>
+                        <li>Configure a linha inicial e as colunas que deseja extrair</li>
+                        <li>Selecione um arquivo .xlsx/.xls</li>
+                        <li>O sistema irá extrair automaticamente as colunas especificadas</li>
+                        <li>Linhas duplicadas serão removidas automaticamente</li>
+                        <li>Clique em <b>"Baixar Arquivo TXT"</b> para salvar o resultado</li>
+                        <li>Clique em <b>"Baixar Duplicatas"</b> para salvar a lista de linhas duplicadas</li>
+                        <li>Após baixar o arquivo use a aba <b>"TXT para JSON"</b> para gerar o arquivo para emissão</li>
+                    </ol>
+                    <p><strong>Formato de saída:</strong> CTE [tab] FRETE (sem cabeçalho, sem duplicatas) em formato TXT</p>
                 </div>
             </div>
             
-            <div class="card">
-                <div class="card-title">
-                    <i class="fas fa-file-upload"></i> Upload do Arquivo
+            <!-- Tab TXT para JSON -->
+            <div id="txt-to-json" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fas fa-cog"></i> Configurações do Ambiente
+                    </div>
+                    <p>Selecione o ambiente que deseja utilizar:</p>
+                    
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="producao" name="ambiente" value="producao" checked>
+                            <label for="producao">
+                                <i class="fas fa-server"></i> Produção
+                            </label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="homologacao" name="ambiente" value="homologacao">
+                            <label for="homologacao">
+                                <i class="fas fa-flask"></i> Homologação
+                            </label>
+                        </div>
+                    </div>
                 </div>
-                <p>Selecione o arquivo TXT que deseja processar:</p>
                 
-                <div class="file-upload">
-                    <input type="file" id="arquivo" class="file-upload-input" accept=".txt">
-                    <label for="arquivo" class="file-upload-label">
-                        <i class="fas fa-cloud-upload-alt"></i> Selecionar Arquivo TXT
-                    </label>
-                    <div id="file-name" class="file-name">Nenhum arquivo selecionado</div>
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fas fa-file-upload"></i> Upload do Arquivo TXT
+                    </div>
+                    <p>Selecione o arquivo TXT que deseja converter para JSON:</p>
+                    
+                    <div class="file-upload">
+                        <input type="file" id="txt-file" class="file-upload-input" accept=".txt">
+                        <label for="txt-file" class="file-upload-label">
+                            <i class="fas fa-file-upload"></i> Selecionar Arquivo TXT
+                        </label>
+                        <div id="txt-file-name" class="file-name">Nenhum arquivo selecionado</div>
+                    </div>
+                    
+                    <div id="txt-status" class="status"></div>
                 </div>
                 
-                <div id="status"></div>
-            </div>
-            
-            <div class="info-box">
-                <h3><i class="fas fa-info-circle"></i> Instruções de Uso</h3>
-                <ol>
-                    <li>Verifique duplicidade nas chaves de acesso</li>
-                    <li>Inverta as colunas de valor e chave de acesso</li>
-                    <li>Selecione o ambiente (Produção ou Homologação)</li>
-                    <li>Clique em "Selecionar Arquivo TXT"</li>
-                    <li>Escolha seu arquivo de texto com os dados</li>
-                    <li>O arquivo processado será baixado automaticamente</li>
-                </ol>
+                <div class="info-box">
+                    <h3><i class="fas fa-info-circle"></i> Instruções para Conversão TXT→JSON</h3>
+                    <ol>
+                        <li>Selecione o ambiente (Produção ou Homologação)</li>
+                        <li>Clique em "Selecionar Arquivo TXT"</li>
+                        <li>Escolha seu arquivo de texto com os dados</li>
+                        <li>O arquivo JSON será baixado automaticamente</li>
+                    </ol>
+                </div>
             </div>
         </div>
         
         <div class="footer">
-            <p>Processador de CT-e Murici &copy; 2023 | Desenvolvido por Anderson Fischer para facilitar sua operação</p>
+            <p>Processador de CT-e Murici &copy; 2023 | Desenvolvido por Anderson Fischer</p>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const fileInput = document.getElementById('arquivo');
-            const fileNameElement = document.getElementById('file-name');
-            const statusElement = document.getElementById('status');
+            // Tab functionality
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all tabs and contents
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding content
+                    this.classList.add('active');
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
             
-            fileInput.addEventListener('change', function(e) {
+            // Excel to TXT functionality
+            const excelFileInput = document.getElementById('excel-file');
+            const excelFileName = document.getElementById('excel-file-name');
+            const excelStatus = document.getElementById('excel-status');
+            const duplicatesContainer = document.getElementById('duplicates-container');
+            const duplicatesList = document.getElementById('duplicates-list');
+            const downloadTxtBtn = document.getElementById('download-txt-btn');
+            const downloadDuplicatesBtn = document.getElementById('download-duplicates-btn');
+            const clearExcelBtn = document.getElementById('clear-excel-btn');
+            const startRowInput = document.getElementById('start-row');
+            const cteColInput = document.getElementById('cte-col');
+            const freteColInput = document.getElementById('frete-col');
+            
+            let processedExcelData = "";
+            let duplicatesData = [];
+            
+            excelFileInput.addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 
-                // Reset status
-                statusElement.style.display = 'none';
-                
                 if (file) {
-                    fileNameElement.textContent = `Arquivo selecionado: ${file.name}`;
-                    processFile(file);
+                    excelFileName.textContent = `Arquivo selecionado: ${file.name}`;
+                    processExcelFile(file);
                 } else {
-                    fileNameElement.textContent = 'Nenhum arquivo selecionado';
+                    excelFileName.textContent = 'Nenhum arquivo selecionado';
                 }
             });
             
-            function processFile(file) {
-                if (!file.name.endsWith('.txt')) {
-                    showStatus('<i class="fas fa-exclamation-circle"></i> Por favor, selecione um arquivo .txt válido!', 'error');
+            function letterToColumn(letter) {
+                let column = 0;
+                letter = letter.toUpperCase();
+                for (let i = 0; i < letter.length; i++) {
+                    column = column * 26 + (letter.charCodeAt(i) - 'A'.charCodeAt(0) + 1);
+                }
+                return column - 1; // Convert to 0-based index
+            }
+            
+            function processExcelFile(file) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        showExcelStatus('<i class="fas fa-cog fa-spin"></i> Processando arquivo...', 'info');
+                        
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        // Get first sheet
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        // Convert to JSON keeping empty cells
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+                            header: 1, 
+                            defval: "",
+                            blankrows: false 
+                        });
+                        
+                        // Get configuration values
+                        const startRow = parseInt(startRowInput.value) || 3;
+                        const cteCol = cteColInput.value.trim().toUpperCase() || 'E';
+                        const freteCol = freteColInput.value.trim().toUpperCase() || 'D';
+                        
+                        // Convert column letters to 0-based indices
+                        const CTE_COL = letterToColumn(cteCol);
+                        const FRETE_COL = letterToColumn(freteCol);
+                        
+                        // Verify minimum rows
+                        if (jsonData.length < startRow) {
+                            throw new Error(`O arquivo precisa ter pelo menos ${startRow} linhas para começar a extração.`);
+                        }
+                        
+                        // Objects for duplicate tracking
+                        const processedLines = {};
+                        const foundDuplicates = {};
+                        
+                        // Process data starting from specified row (converting to 0-based index)
+                        processedExcelData = "";
+                        duplicatesData = [];
+                        for (let i = startRow - 1; i < jsonData.length; i++) {
+                            const row = jsonData[i];
+                            const cte = row[CTE_COL] !== undefined ? String(row[CTE_COL]).trim() : "";
+                            const frete = row[FRETE_COL] !== undefined ? String(row[FRETE_COL]).trim() : "";
+                            
+                            // Process only rows with both values
+                            if (cte && frete) {
+                                const lineKey = `${cte}_${frete}`;
+                                
+                                if (processedLines[lineKey]) {
+                                    // Register duplicate
+                                    if (!foundDuplicates[lineKey]) {
+                                        foundDuplicates[lineKey] = {
+                                            cte: cte,
+                                            frete: frete,
+                                            count: 1,
+                                            lines: [i + 1] // +1 for Excel row number
+                                        };
+                                    } else {
+                                        foundDuplicates[lineKey].count++;
+                                        foundDuplicates[lineKey].lines.push(i + 1);
+                                    }
+                                } else {
+                                    // Add unique line to result (CTE first, then FRETE)
+                                    processedExcelData += `${cte}\t${frete}\n`;
+                                    processedLines[lineKey] = true;
+                                }
+                            }
+                        }
+                        
+                        // Prepare duplicates report
+                        const duplicateKeys = Object.keys(foundDuplicates);
+                        
+                        if (duplicateKeys.length > 0) {
+                            duplicatesList.innerHTML = '';
+                            duplicatesData = [];
+                            
+                            duplicateKeys.forEach(key => {
+                                const dup = foundDuplicates[key];
+                                const duplicateInfo = `CTE: ${dup.cte} | FRETE: ${dup.frete} | Ocorrências: ${dup.count}x | Linhas: ${dup.lines.join(', ')}`;
+                                
+                                // Add to on-screen list
+                                const div = document.createElement('div');
+                                div.className = 'duplicate-item';
+                                div.textContent = duplicateInfo;
+                                duplicatesList.appendChild(div);
+                                
+                                // Add to downloadable data
+                                duplicatesData.push(duplicateInfo);
+                            });
+                            
+                            showExcelStatus(`<i class="fas fa-exclamation-triangle"></i> ${duplicateKeys.length} conjunto(s) de dados duplicados encontrados.`, 'warning');
+                            duplicatesContainer.style.display = 'block';
+                            downloadDuplicatesBtn.style.display = 'block';
+                        } else {
+                            showExcelStatus('<i class="fas fa-check-circle"></i> Arquivo processado com sucesso! Nenhuma duplicata encontrada.', 'success');
+                            duplicatesContainer.style.display = 'none';
+                            downloadDuplicatesBtn.style.display = 'none';
+                        }
+                        
+                        downloadTxtBtn.style.display = processedExcelData ? 'block' : 'none';
+                        
+                    } catch (error) {
+                        showExcelStatus(`<i class="fas fa-times-circle"></i> Erro ao processar arquivo: ${error.message}`, 'error');
+                        downloadTxtBtn.style.display = 'none';
+                        downloadDuplicatesBtn.style.display = 'none';
+                        duplicatesContainer.style.display = 'none';
+                        console.error("Erro detalhado:", error);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    showExcelStatus('<i class="fas fa-times-circle"></i> Erro ao ler o arquivo. Por favor, tente novamente.', 'error');
+                    downloadTxtBtn.style.display = 'none';
+                    downloadDuplicatesBtn.style.display = 'none';
+                    duplicatesContainer.style.display = 'none';
+                };
+                
+                reader.readAsArrayBuffer(file);
+            }
+            
+            function showExcelStatus(message, type) {
+                excelStatus.innerHTML = message;
+                excelStatus.className = type;
+                excelStatus.style.display = 'flex';
+            }
+            
+            downloadTxtBtn.addEventListener('click', function() {
+                if (!processedExcelData) {
+                    showExcelStatus('<i class="fas fa-times-circle"></i> Nenhum dado processado para baixar.', 'error');
                     return;
                 }
                 
-                const ambiente = document.querySelector('input[name="ambiente"]:checked').value;
+                try {
+                    const blob = new Blob([processedExcelData], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'CTE_FRETE.txt';
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // Cleanup
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }, 100);
+                    
+                } catch (error) {
+                    showExcelStatus(`<i class="fas fa-times-circle"></i> Erro ao gerar arquivo para download: ${error.message}`, 'error');
+                }
+            });
+            
+            downloadDuplicatesBtn.addEventListener('click', function() {
+                if (duplicatesData.length === 0) {
+                    showExcelStatus('<i class="fas fa-times-circle"></i> Nenhuma duplicata encontrada para baixar.', 'error');
+                    return;
+                }
+                
+                try {
+                    const content = duplicatesData.join('\n');
+                    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'DUPLICATAS_CTE_FRETE.txt';
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // Cleanup
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }, 100);
+                    
+                } catch (error) {
+                    showExcelStatus(`<i class="fas fa-times-circle"></i> Erro ao gerar arquivo de duplicatas: ${error.message}`, 'error');
+                }
+            });
+            
+            clearExcelBtn.addEventListener('click', function() {
+                excelFileInput.value = '';
+                excelFileName.textContent = 'Nenhum arquivo selecionado';
+                excelStatus.style.display = 'none';
+                duplicatesContainer.style.display = 'none';
+                downloadTxtBtn.style.display = 'none';
+                downloadDuplicatesBtn.style.display = 'none';
+                processedExcelData = '';
+                duplicatesData = [];
+            });
+            
+            // TXT to JSON functionality
+            const txtFileInput = document.getElementById('txt-file');
+            const txtFileName = document.getElementById('txt-file-name');
+            const txtStatus = document.getElementById('txt-status');
+            
+            txtFileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                
+                // Reset status
+                txtStatus.style.display = 'none';
+                
+                if (file) {
+                    txtFileName.textContent = `Arquivo selecionado: ${file.name}`;
+                    processTxtFile(file);
+                } else {
+                    txtFileName.textContent = 'Nenhum arquivo selecionado';
+                }
+            });
+            
+            function processTxtFile(file) {
+                if (!file.name.endsWith('.txt')) {
+                    showTxtStatus('<i class="fas fa-exclamation-circle"></i> Por favor, selecione um arquivo .txt válido!', 'error');
+                    return;
+                }
+                
+                const environment = document.querySelector('input[name="ambiente"]:checked').value;
                 
                 const reader = new FileReader();
                 
                 reader.onload = function(e) {
                     try {
-                        showStatus('<i class="fas fa-cog fa-spin"></i> Processando arquivo...', 'info');
+                        showTxtStatus('<i class="fas fa-cog fa-spin"></i> Processando arquivo...', 'info');
                         
-                        const conteudo = e.target.result;
-                        const linhas = conteudo.split('\n').filter(linha => linha.trim());
+                        const content = e.target.result;
+                        const lines = content.split('\n').filter(line => line.trim());
                         
-                        // Configurações por ambiente
+                        // Environment configurations
                         const config = {
                             "producao": {
                                 "cnpjTransportador": "24657266000170",
@@ -370,24 +822,24 @@
                             }
                         };
                         
-                        // Processar cada linha
-                        const cteItens = [];
-                        for (const linha of linhas) {
-                            const linhaLimpa = linha.replace('R$', '').replace(/\./g, '').trim();
-                            const chave = linhaLimpa.substring(0, 44);
-                            const valor = linhaLimpa.substring(44).replace(',', '.').trim();
+                        // Process each line
+                        const cteItems = [];
+                        for (const line of lines) {
+                            const cleanLine = line.replace('R$', '').replace(/\./g, '').trim();
+                            const key = cleanLine.substring(0, 44);
+                            const value = cleanLine.substring(44).replace(',', '.').trim();
                             
-                            cteItens.push(`{"chaveAcesso": "${chave}", "valorFrete": ${parseFloat(valor).toFixed(2)}}`);
+                            cteItems.push(`{"chaveAcesso": "${key}", "valorFrete": ${parseFloat(value).toFixed(2)}}`);
                         }
                         
-                        // Construir o JSON manualmente
+                        // Build JSON manually
                         let jsonContent = '{\n';
-                        jsonContent += `\t"cnpjTransportador": "${config[ambiente].cnpjTransportador}",\n`;
-                        jsonContent += `\t"cpfMotorista": "${config[ambiente].cpfMotorista}",\n`;
+                        jsonContent += `\t"cnpjTransportador": "${config[environment].cnpjTransportador}",\n`;
+                        jsonContent += `\t"cpfMotorista": "${config[environment].cpfMotorista}",\n`;
                         jsonContent += '\t"cte": [\n';
                         
-                        cteItens.forEach((item, index) => {
-                            jsonContent += `\t\t${item}${index < cteItens.length - 1 ? ',' : ''}\n`;
+                        cteItems.forEach((item, index) => {
+                            jsonContent += `\t\t${item}${index < cteItems.length - 1 ? ',' : ''}\n`;
                         });
                         
                         jsonContent += '\t],\n';
@@ -400,33 +852,33 @@
                         jsonContent += '\t]\n';
                         jsonContent += '}';
                         
-                        // Gerar nome do arquivo de saída
-                        const sufixo = ambiente === 'producao' ? '_producao.txt' : '_homologacao.txt';
-                        const nomeSaida = file.name.replace('.txt', sufixo);
+                        // Generate output filename
+                        const suffix = environment === 'producao' ? '_producao.txt' : '_homologacao.txt';
+                        const outputName = file.name.replace('.txt', suffix);
                         
-                        // Criar e baixar o arquivo
+                        // Create and download file
                         setTimeout(() => {
-                            downloadFile(jsonContent, nomeSaida);
-                            showStatus(`<i class="fas fa-check-circle"></i> Arquivo ${nomeSaida} gerado com sucesso!`, 'success');
+                            downloadFile(jsonContent, outputName);
+                            showTxtStatus(`<i class="fas fa-check-circle"></i> Arquivo ${outputName} gerado com sucesso!`, 'success');
                         }, 500);
                         
                     } catch (err) {
-                        showStatus(`<i class="fas fa-times-circle"></i> Erro ao processar o arquivo: ${err.message}`, 'error');
+                        showTxtStatus(`<i class="fas fa-times-circle"></i> Erro ao processar o arquivo: ${err.message}`, 'error');
                         console.error(err);
                     }
                 };
                 
                 reader.onerror = function() {
-                    showStatus('<i class="fas fa-times-circle"></i> Erro ao ler o arquivo.', 'error');
+                    showTxtStatus('<i class="fas fa-times-circle"></i> Erro ao ler o arquivo.', 'error');
                 };
                 
                 reader.readAsText(file, 'UTF-8');
             }
             
-            function showStatus(message, type) {
-                statusElement.innerHTML = message;
-                statusElement.className = type;
-                statusElement.style.display = 'flex';
+            function showTxtStatus(message, type) {
+                txtStatus.innerHTML = message;
+                txtStatus.className = type;
+                txtStatus.style.display = 'flex';
             }
             
             function downloadFile(content, filename) {
