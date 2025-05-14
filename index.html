@@ -372,10 +372,18 @@
             gap: 10px;
             margin-bottom: 10px;
             align-items: center;
+            flex-wrap: wrap;
         }
         
         .column-input {
             width: 60px;
+        }
+        
+        .column-type-select {
+            padding: 8px;
+            border-radius: var(--border-radius);
+            border: 1px solid #ddd;
+            width: 120px;
         }
         
         .remove-column-btn {
@@ -397,6 +405,23 @@
             align-items: center;
             gap: 5px;
             margin-top: 10px;
+        }
+        
+        .currency-options {
+            background-color: rgba(39, 174, 96, 0.1);
+            border-left: 3px solid var(--success-color);
+            padding: 8px;
+            border-radius: var(--border-radius);
+            display: none;
+            width: 100%;
+            margin-top: 5px;
+        }
+        
+        .currency-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
         }
         
         @media (max-width: 768px) {
@@ -435,6 +460,10 @@
                 flex-direction: column;
                 align-items: flex-start;
             }
+            
+            .column-type-select {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -465,7 +494,7 @@
                         </div>
                         <div class="config-row">
                             <label class="config-label">Separador:</label>
-                            <input type="text" id="separator" class="config-input separator-input" value="\t" placeholder="Ex: \t ou ,">
+                            <input type="text" id="separator" class="config-input separator-input" value=";" placeholder="Ex: \t ou ,">
                         </div>
                     </div>
                     
@@ -474,6 +503,20 @@
                         <div id="columns-list">
                             <div class="column-item">
                                 <input type="text" class="config-input column-input" value="E" placeholder="Ex: A">
+                                <select class="column-type-select" onchange="toggleCurrencyOptions(this)">
+                                    <option value="text">Texto</option>
+                                    <option value="currency">Valor Monetário</option>
+                                </select>
+                                <div class="currency-options">
+                                    <div class="currency-option">
+                                        <input type="checkbox" class="add-rs" checked id="add-rs-1">
+                                        <label for="add-rs-1">Adicionar "R$"</label>
+                                    </div>
+                                    <div class="currency-option">
+                                        <input type="checkbox" class="decimal-separator" checked id="decimal-sep-1">
+                                        <label for="decimal-sep-1">Usar vírgula decimal</label>
+                                    </div>
+                                </div>
                                 <button class="remove-column-btn" onclick="removeColumn(this)"><i class="fas fa-times"></i></button>
                             </div>
                         </div>
@@ -515,6 +558,7 @@
                     <ol>
                         <li>Configure a linha inicial e as colunas que deseja extrair</li>
                         <li>Adicione quantas colunas precisar</li>
+                        <li>Para valores monetários, selecione "Valor Monetário" e configure as opções</li>
                         <li>Defina o separador que será usado no arquivo TXT (padrão: \t para tabulação)</li>
                         <li>Selecione um arquivo .xlsx/.xls</li>
                         <li>O sistema irá extrair automaticamente as colunas especificadas</li>
@@ -584,16 +628,40 @@
     </div>
 
     <script>
+        // Contador para IDs únicos
+        let columnCounter = 1;
+        
         // Funções globais para manipulação de colunas
         function addColumn() {
             const columnsList = document.getElementById('columns-list');
+            columnCounter++;
+            
             const newColumn = document.createElement('div');
             newColumn.className = 'column-item';
             newColumn.innerHTML = `
                 <input type="text" class="config-input column-input" placeholder="Ex: A">
+                <select class="column-type-select" onchange="toggleCurrencyOptions(this)">
+                    <option value="text">Texto</option>
+                    <option value="currency">Valor Monetário</option>
+                </select>
+                <div class="currency-options">
+                    <div class="currency-option">
+                        <input type="checkbox" class="add-rs" checked id="add-rs-${columnCounter}">
+                        <label for="add-rs-${columnCounter}">Adicionar "R$"</label>
+                    </div>
+                    <div class="currency-option">
+                        <input type="checkbox" class="decimal-separator" checked id="decimal-sep-${columnCounter}">
+                        <label for="decimal-sep-${columnCounter}">Usar vírgula decimal</label>
+                    </div>
+                </div>
                 <button class="remove-column-btn" onclick="removeColumn(this)"><i class="fas fa-times"></i></button>
             `;
             columnsList.appendChild(newColumn);
+        }
+        
+        function toggleCurrencyOptions(select) {
+            const currencyOptions = select.parentElement.querySelector('.currency-options');
+            currencyOptions.style.display = select.value === 'currency' ? 'block' : 'none';
         }
         
         function removeColumn(button) {
@@ -605,6 +673,53 @@
             }
         }
         
+        function letterToColumn(letter) {
+            let column = 0;
+            letter = letter.toUpperCase();
+            for (let i = 0; i < letter.length; i++) {
+                column = column * 26 + (letter.charCodeAt(i) - 'A'.charCodeAt(0) + 1);
+            }
+            return column - 1; // Convert to 0-based index
+        }
+        
+        function formatCurrency(value, addRS, useComma) {
+            // Remove qualquer formatação existente (R$, pontos, espaços)
+            let cleanedValue = value.replace(/[^\d,.-]/g, '');
+            
+            // Verifica se o valor tem vírgula decimal (formato brasileiro)
+            const hasComma = cleanedValue.includes(',');
+            const hasDot = cleanedValue.includes('.');
+            
+            // Se o valor tem vírgula como decimal
+            if (hasComma) {
+                // Remove pontos de milhar (1.234,56 → 1234,56)
+                cleanedValue = cleanedValue.replace(/\./g, '');
+                // Substitui vírgula decimal por ponto para parseFloat
+                cleanedValue = cleanedValue.replace(',', '.');
+            }
+            // Se tem ponto decimal mas não vírgula (formato internacional)
+            else if (hasDot) {
+                // Remove vírgulas de milhar se existirem (1,234.56 → 1234.56)
+                cleanedValue = cleanedValue.replace(/,/g, '');
+            }
+            
+            // Converte para número
+            const numValue = parseFloat(cleanedValue) || 0;
+            
+            // Formata como moeda brasileira
+            let formattedValue = numValue.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            
+            // Adiciona R$ se configurado
+            if (addRS) {
+                formattedValue = 'R$ ' + formattedValue;
+            }
+            
+            return formattedValue;
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             // Tab functionality
             const tabs = document.querySelectorAll('.tab');
@@ -647,15 +762,6 @@
                 }
             });
             
-            function letterToColumn(letter) {
-                let column = 0;
-                letter = letter.toUpperCase();
-                for (let i = 0; i < letter.length; i++) {
-                    column = column * 26 + (letter.charCodeAt(i) - 'A'.charCodeAt(0) + 1);
-                }
-                return column - 1; // Convert to 0-based index
-            }
-            
             function processExcelFile(file) {
                 const reader = new FileReader();
                 
@@ -681,17 +787,25 @@
                         const startRow = parseInt(startRowInput.value) || 3;
                         const separator = separatorInput.value.replace(/\\t/g, '\t'); // Replace \t with actual tab
                         
-                        // Get columns to export
-                        const columnsToExport = [];
-                        const columnInputs = document.querySelectorAll('.column-input');
-                        columnInputs.forEach(input => {
-                            const colLetter = input.value.trim().toUpperCase();
+                        // Get columns configuration
+                        const columnsConfig = [];
+                        const columnItems = document.querySelectorAll('.column-item');
+                        columnItems.forEach(item => {
+                            const colLetter = item.querySelector('.column-input').value.trim().toUpperCase();
                             if (colLetter) {
-                                columnsToExport.push(letterToColumn(colLetter));
+                                const type = item.querySelector('.column-type-select').value;
+                                const addRS = type === 'currency' && item.querySelector('.add-rs').checked;
+                                const useComma = type === 'currency' && item.querySelector('.decimal-separator').checked;
+                                columnsConfig.push({
+                                    index: letterToColumn(colLetter),
+                                    type: type,
+                                    addRS: addRS,
+                                    useComma: useComma
+                                });
                             }
                         });
                         
-                        if (columnsToExport.length === 0) {
+                        if (columnsConfig.length === 0) {
                             throw new Error('Nenhuma coluna válida configurada para exportação.');
                         }
                         
@@ -713,14 +827,24 @@
                             let lineKeyParts = [];
                             
                             // Get values from all specified columns
-                            for (const colIndex of columnsToExport) {
-                                const value = row[colIndex] !== undefined ? String(row[colIndex]).trim() : "";
+                            for (const config of columnsConfig) {
+                                let value = row[config.index] !== undefined ? String(row[config.index]).trim() : "";
+                                
+                                // Process empty values
+                                if (value === "") {
+                                    value = " "; // Espaço para valores vazios
+                                } 
+                                // Process currency values
+                                else if (config.type === 'currency') {
+                                    value = formatCurrency(value, config.addRS, config.useComma);
+                                }
+                                
                                 lineValues.push(value);
                                 lineKeyParts.push(value);
                             }
                             
-                            // Skip empty lines
-                            if (lineValues.some(v => v)) {
+                            // Skip completely empty lines
+                            if (lineValues.some(v => v !== " ")) {
                                 const lineKey = lineKeyParts.join('_');
                                 
                                 if (processedLines[lineKey]) {
@@ -915,11 +1039,26 @@
                         // Process each line
                         const cteItems = [];
                         for (const line of lines) {
-                            const cleanLine = line.replace('R$', '').replace(/\./g, '').trim();
-                            const key = cleanLine.substring(0, 44);
-                            const value = cleanLine.substring(44).replace(',', '.').trim();
+                            // Remove espaços em branco e divide pelo separador
+                            const trimmedLine = line.trim();
+                            const separator = document.getElementById('separator').value.replace(/\\t/g, '\t');
+                            const parts = trimmedLine.split(separator);
                             
-                            cteItems.push(`{"chaveAcesso": "${key}", "valorFrete": ${parseFloat(value).toFixed(2)}}`);
+                            // Considera que a linha deve ter pelo menos 2 colunas (CTE e Valor)
+                            if (parts.length >= 2) {
+                                const cte = parts[0].trim();
+                                let valor = parts[1].trim();
+                                
+                                // Formata o valor corretamente
+                                valor = valor.replace('R$', '').trim();
+                                valor = valor.replace(/\./g, '').replace(',', '.');
+                                
+                                // Garante que o valor tem 2 casas decimais
+                                const valorNumerico = parseFloat(valor) || 0;
+                                const valorFormatado = valorNumerico.toFixed(2);
+                                
+                                cteItems.push(`{"chaveAcesso": "${cte}", "valorFrete": ${valorFormatado}}`);
+                            }
                         }
                         
                         // Build JSON manually
