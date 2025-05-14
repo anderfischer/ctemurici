@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processador de CT-e Murici | Conversor de Arquivos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2980b9;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --warning-color: #f39c12;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+            --text-color: #34495e;
+            --border-radius: 6px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-weight: 500;
+            margin-bottom: 5px;
+            font-size: 28px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-weight: 300;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e0e6ed;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            color: var(--dark-color);
+            display: flex;
+            align-items: center;
+        }
+        
+        .card-title i {
+            margin-right: 10px;
+            color: var(--primary-color);
+        }
+        
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e0e6ed;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: var(--transition);
+        }
+        
+        .tab.active {
+            border-bottom: 3px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .radio-option {
+            position: relative;
+            flex: 1 1 200px;
+        }
+        
+        .radio-option input {
+            position: absolute;
+            opacity: 0;
+        }
+        
+        .radio-option label {
+            display: block;
+            padding: 15px 20px;
+            background: var(--light-color);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .radio-option input:checked + label {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .radio-option input:focus + label {
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+        }
+        
+        .file-upload {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .file-upload-input {
+            display: none;
+        }
+        
+        .file-upload-label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px 25px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+            font-size: 16px;
+        }
+        
+        .file-upload-label:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .file-upload-label i {
+            margin-right: 10px;
+        }
+        
+        .file-name {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        
+        .status {
+            margin: 25px 0;
+            padding: 15px 20px;
+            border-radius: var(--border-radius);
+            display: none;
+            align-items: center;
+            font-weight: 500;
+        }
+        
+        .status i {
+            margin-right: 10px;
+            font-size: 20px;
+        }
+        
+        .success {
+            background-color: rgba(39, 174, 96, 0.1);
+            color: var(--success-color);
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .error {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: var(--error-color);
+            border-left: 4px solid var(--error-color);
+        }
+        
+        .info {
+            background-color: rgba(52, 152, 219, 0.1);
+            color: var(--primary-color);
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .warning {
+            background-color: rgba(243, 156, 18, 0.1);
+            color: var(--warning-color);
+            border-left: 4px solid var(--warning-color);
+        }
+        
+        .duplicates-container {
+            margin-top: 20px;
+            border: 1px solid #eee;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .duplicate-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            font-family: monospace;
+        }
+        
+        .duplicate-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-box {
+            background: rgba(52, 152, 219, 0.1);
+            border-left: 4px solid var(--primary-color);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin-top: 30px;
+        }
+        
+        .info-box h3 {
+            color: var(--dark-color);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .info-box h3 i {
+            margin-right: 10px;
+            color: var(--primary-color);
+        }
+        
+        .info-box ol {
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .info-box li {
+            margin-bottom: 8px;
+        }
+        
+        .info-box p {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .info-box strong {
+            color: var(--dark-color);
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 13px;
+            color: #7f8c8d;
+            border-top: 1px solid #e0e6ed;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .action-button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .action-button i {
+            margin-right: 8px;
+        }
+        
+        .primary-button {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .primary-button:hover {
+            background-color: var(--secondary-color);
+        }
+        
+        .secondary-button {
+            background-color: var(--light-color);
+            color: var(--dark-color);
+        }
+        
+        .secondary-button:hover {
+            background-color: #d5dbdb;
+        }
+        
+        .config-group {
+            margin-bottom: 20px;
+        }
+        
+        .config-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        
+        .config-label {
+            min-width: 120px;
+            font-weight: 500;
+        }
+        
+        .config-input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            width: 80px;
+        }
+        
+        .separator-input {
+            width: 50px;
+            text-align: center;
+        }
+        
+        .columns-container {
+            margin-top: 20px;
+        }
+        
+        .column-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .column-input {
+            width: 60px;
+        }
+        
+        .remove-column-btn {
+            background: none;
+            border: none;
+            color: var(--error-color);
+            cursor: pointer;
+            font-size: 18px;
+        }
+        
+        .add-column-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 8px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px auto;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .radio-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .radio-option {
+                flex: 1 1 auto;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .config-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            
+            .config-input {
+                width: 100%;
+            }
+            
+            .column-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-file-alt"></i> Processador de CT-e Murici</h1>
+        </div>
+        
+        <div class="content">
+            <div class="tab-container">
+                <div class="tab active" data-tab="excel-to-txt">Excel para TXT</div>
+                <div class="tab" data-tab="txt-to-json">TXT para JSON</div>
+            </div>
+            
+            <!-- Tab Excel para TXT -->
+            <div id="excel-to-txt" class="tab-content active">
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fas fa-file-excel"></i> Conversor Excel para TXT
+                    </div>
+                    <p>Converta arquivos Excel (.xlsx) para TXT extraindo as colunas selecionadas a partir da linha especificada</p>
+                    
+                    <div class="config-group">
+                        <div class="config-row">
+                            <label class="config-label">Linha inicial:</label>
+                            <input type="number" id="start-row" class="config-input" value="3" min="1">
+                        </div>
+                        <div class="config-row">
+                            <label class="config-label">Separador:</label>
+                            <input type="text" id="separator" class="config-input separator-input" value="\t" placeholder="Ex: \t ou ,">
+                        </div>
+                    </div>
+                    
+                    <div class="columns-container">
+                        <h4>Colunas para exportar:</h4>
+                        <div id="columns-list">
+                            <div class="column-item">
+                                <input type="text" class="config-input column-input" value="E" placeholder="Ex: A">
+                                <button class="remove-column-btn" onclick="removeColumn(this)"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                        <button class="add-column-btn" onclick="addColumn()">
+                            <i class="fas fa-plus"></i> Adicionar Coluna
+                        </button>
+                    </div>
+                    
+                    <div class="file-upload">
+                        <input type="file" id="excel-file" class="file-upload-input" accept=".xlsx, .xls">
+                        <label for="excel-file" class="file-upload-label">
+                            <i class="fas fa-file-excel"></i> Selecionar Arquivo Excel
+                        </label>
+                        <div id="excel-file-name" class="file-name">Nenhum arquivo selecionado</div>
+                    </div>
+                    
+                    <div id="excel-status" class="status"></div>
+                    
+                    <div id="duplicates-container" class="duplicates-container" style="display: none;">
+                        <h4><i class="fas fa-exclamation-triangle"></i> Linhas Duplicadas Encontradas:</h4>
+                        <div id="duplicates-list"></div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button id="download-txt-btn" class="action-button primary-button" style="display: none;">
+                            <i class="fas fa-download"></i> Baixar Arquivo TXT
+                        </button>
+                        <button id="download-duplicates-btn" class="action-button warning-button" style="display: none; background-color: var(--warning-color); color: white;">
+                            <i class="fas fa-file-download"></i> Baixar Duplicatas
+                        </button>
+                        <button id="clear-excel-btn" class="action-button secondary-button">
+                            <i class="fas fa-trash-alt"></i> Limpar
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <h3><i class="fas fa-info-circle"></i> Instruções para Conversão Excel→TXT</h3>
+                    <ol>
+                        <li>Configure a linha inicial e as colunas que deseja extrair</li>
+                        <li>Adicione quantas colunas precisar</li>
+                        <li>Defina o separador que será usado no arquivo TXT (padrão: \t para tabulação)</li>
+                        <li>Selecione um arquivo .xlsx/.xls</li>
+                        <li>O sistema irá extrair automaticamente as colunas especificadas</li>
+                        <li>Clique em <b>"Baixar Arquivo TXT"</b> para salvar o resultado</li>
+                        <li>Após baixar o arquivo use a aba <b>"TXT para JSON"</b> para gerar o arquivo para emissão</li>
+                    </ol>
+                    <p><strong>Dica:</strong> Use \t para tabulação, , para CSV, | para pipe, ou qualquer outro caractere como separador</p>
+                </div>
+            </div>
+            
+            <!-- Tab TXT para JSON -->
+            <div id="txt-to-json" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fas fa-cog"></i> Configurações do Ambiente
+                    </div>
+                    <p>Selecione o ambiente que deseja utilizar:</p>
+                    
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="producao" name="ambiente" value="producao" checked>
+                            <label for="producao">
+                                <i class="fas fa-server"></i> Produção
+                            </label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="homologacao" name="ambiente" value="homologacao">
+                            <label for="homologacao">
+                                <i class="fas fa-flask"></i> Homologação
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">
+                        <i class="fas fa-file-upload"></i> Upload do Arquivo TXT
+                    </div>
+                    <p>Selecione o arquivo TXT que deseja converter para JSON:</p>
+                    
+                    <div class="file-upload">
+                        <input type="file" id="txt-file" class="file-upload-input" accept=".txt">
+                        <label for="txt-file" class="file-upload-label">
+                            <i class="fas fa-file-upload"></i> Selecionar Arquivo TXT
+                        </label>
+                        <div id="txt-file-name" class="file-name">Nenhum arquivo selecionado</div>
+                    </div>
+                    
+                    <div id="txt-status" class="status"></div>
+                </div>
+                
+                <div class="info-box">
+                    <h3><i class="fas fa-info-circle"></i> Instruções para Conversão TXT→JSON</h3>
+                    <ol>
+                        <li>Selecione o ambiente (Produção ou Homologação)</li>
+                        <li>Clique em "Selecionar Arquivo TXT"</li>
+                        <li>Escolha seu arquivo de texto com os dados</li>
+                        <li>O arquivo JSON será baixado automaticamente</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Processador de CT-e Murici &copy; 2023 | Desenvolvido por Anderson Fischer</p>
+        </div>
+    </div>
+
+    <script>
+        // Funções globais para manipulação de colunas
+        function addColumn() {
+            const columnsList = document.getElementById('columns-list');
+            const newColumn = document.createElement('div');
+            newColumn.className = 'column-item';
+            newColumn.innerHTML = `
+                <input type="text" class="config-input column-input" placeholder="Ex: A">
+                <button class="remove-column-btn" onclick="removeColumn(this)"><i class="fas fa-times"></i></button>
+            `;
+            columnsList.appendChild(newColumn);
+        }
+        
+        function removeColumn(button) {
+            const columnsList = document.getElementById('columns-list');
+            if (columnsList.children.length > 1) {
+                button.parentElement.remove();
+            } else {
+                alert('Você precisa ter pelo menos uma coluna configurada.');
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab functionality
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all tabs and contents
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding content
+                    this.classList.add('active');
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // Excel to TXT functionality
+            const excelFileInput = document.getElementById('excel-file');
+            const excelFileName = document.getElementById('excel-file-name');
+            const excelStatus = document.getElementById('excel-status');
+            const duplicatesContainer = document.getElementById('duplicates-container');
+            const duplicatesList = document.getElementById('duplicates-list');
+            const downloadTxtBtn = document.getElementById('download-txt-btn');
+            const downloadDuplicatesBtn = document.getElementById('download-duplicates-btn');
+            const clearExcelBtn = document.getElementById('clear-excel-btn');
+            const startRowInput = document.getElementById('start-row');
+            const separatorInput = document.getElementById('separator');
+            
+            let processedExcelData = "";
+            let duplicatesData = [];
+            
+            excelFileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                
+                if (file) {
+                    excelFileName.textContent = `Arquivo selecionado: ${file.name}`;
+                    processExcelFile(file);
+                } else {
+                    excelFileName.textContent = 'Nenhum arquivo selecionado';
+                }
+            });
+            
+            function letterToColumn(letter) {
+                let column = 0;
+                letter = letter.toUpperCase();
+                for (let i = 0; i < letter.length; i++) {
+                    column = column * 26 + (letter.charCodeAt(i) - 'A'.charCodeAt(0) + 1);
+                }
+                return column - 1; // Convert to 0-based index
+            }
+            
+            function processExcelFile(file) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        showExcelStatus('<i class="fas fa-cog fa-spin"></i> Processando arquivo...', 'info');
+                        
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        // Get first sheet
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        // Convert to JSON keeping empty cells
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+                            header: 1, 
+                            defval: "",
+                            blankrows: false 
+                        });
+                        
+                        // Get configuration values
+                        const startRow = parseInt(startRowInput.value) || 3;
+                        const separator = separatorInput.value.replace(/\\t/g, '\t'); // Replace \t with actual tab
+                        
+                        // Get columns to export
+                        const columnsToExport = [];
+                        const columnInputs = document.querySelectorAll('.column-input');
+                        columnInputs.forEach(input => {
+                            const colLetter = input.value.trim().toUpperCase();
+                            if (colLetter) {
+                                columnsToExport.push(letterToColumn(colLetter));
+                            }
+                        });
+                        
+                        if (columnsToExport.length === 0) {
+                            throw new Error('Nenhuma coluna válida configurada para exportação.');
+                        }
+                        
+                        // Verify minimum rows
+                        if (jsonData.length < startRow) {
+                            throw new Error(`O arquivo precisa ter pelo menos ${startRow} linhas para começar a extração.`);
+                        }
+                        
+                        // Objects for duplicate tracking
+                        const processedLines = {};
+                        const foundDuplicates = {};
+                        
+                        // Process data starting from specified row (converting to 0-based index)
+                        processedExcelData = "";
+                        duplicatesData = [];
+                        for (let i = startRow - 1; i < jsonData.length; i++) {
+                            const row = jsonData[i];
+                            let lineValues = [];
+                            let lineKeyParts = [];
+                            
+                            // Get values from all specified columns
+                            for (const colIndex of columnsToExport) {
+                                const value = row[colIndex] !== undefined ? String(row[colIndex]).trim() : "";
+                                lineValues.push(value);
+                                lineKeyParts.push(value);
+                            }
+                            
+                            // Skip empty lines
+                            if (lineValues.some(v => v)) {
+                                const lineKey = lineKeyParts.join('_');
+                                
+                                if (processedLines[lineKey]) {
+                                    // Register duplicate
+                                    if (!foundDuplicates[lineKey]) {
+                                        foundDuplicates[lineKey] = {
+                                            values: lineValues,
+                                            count: 1,
+                                            lines: [i + 1] // +1 for Excel row number
+                                        };
+                                    } else {
+                                        foundDuplicates[lineKey].count++;
+                                        foundDuplicates[lineKey].lines.push(i + 1);
+                                    }
+                                } else {
+                                    // Add unique line to result
+                                    processedExcelData += lineValues.join(separator) + '\n';
+                                    processedLines[lineKey] = true;
+                                }
+                            }
+                        }
+                        
+                        // Prepare duplicates report
+                        const duplicateKeys = Object.keys(foundDuplicates);
+                        
+                        if (duplicateKeys.length > 0) {
+                            duplicatesList.innerHTML = '';
+                            duplicatesData = [];
+                            
+                            duplicateKeys.forEach(key => {
+                                const dup = foundDuplicates[key];
+                                const duplicateInfo = `Valores: ${dup.values.join(' | ')} | Ocorrências: ${dup.count}x | Linhas: ${dup.lines.join(', ')}`;
+                                
+                                // Add to on-screen list
+                                const div = document.createElement('div');
+                                div.className = 'duplicate-item';
+                                div.textContent = duplicateInfo;
+                                duplicatesList.appendChild(div);
+                                
+                                // Add to downloadable data
+                                duplicatesData.push(duplicateInfo);
+                            });
+                            
+                            showExcelStatus(`<i class="fas fa-exclamation-triangle"></i> ${duplicateKeys.length} conjunto(s) de dados duplicados encontrados.`, 'warning');
+                            duplicatesContainer.style.display = 'block';
+                            downloadDuplicatesBtn.style.display = 'block';
+                        } else {
+                            showExcelStatus('<i class="fas fa-check-circle"></i> Arquivo processado com sucesso! Nenhuma duplicata encontrada.', 'success');
+                            duplicatesContainer.style.display = 'none';
+                            downloadDuplicatesBtn.style.display = 'none';
+                        }
+                        
+                        downloadTxtBtn.style.display = processedExcelData ? 'block' : 'none';
+                        
+                    } catch (error) {
+                        showExcelStatus(`<i class="fas fa-times-circle"></i> Erro ao processar arquivo: ${error.message}`, 'error');
+                        downloadTxtBtn.style.display = 'none';
+                        downloadDuplicatesBtn.style.display = 'none';
+                        duplicatesContainer.style.display = 'none';
+                        console.error("Erro detalhado:", error);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    showExcelStatus('<i class="fas fa-times-circle"></i> Erro ao ler o arquivo. Por favor, tente novamente.', 'error');
+                    downloadTxtBtn.style.display = 'none';
+                    downloadDuplicatesBtn.style.display = 'none';
+                    duplicatesContainer.style.display = 'none';
+                };
+                
+                reader.readAsArrayBuffer(file);
+            }
+            
+            function showExcelStatus(message, type) {
+                excelStatus.innerHTML = message;
+                excelStatus.className = type;
+                excelStatus.style.display = 'flex';
+            }
+            
+            downloadTxtBtn.addEventListener('click', function() {
+                if (!processedExcelData) {
+                    showExcelStatus('<i class="fas fa-times-circle"></i> Nenhum dado processado para baixar.', 'error');
+                    return;
+                }
+                
+                try {
+                    const blob = new Blob([processedExcelData], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'dados_exportados.txt';
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // Cleanup
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }, 100);
+                    
+                } catch (error) {
+                    showExcelStatus(`<i class="fas fa-times-circle"></i> Erro ao gerar arquivo para download: ${error.message}`, 'error');
+                }
+            });
+            
+            downloadDuplicatesBtn.addEventListener('click', function() {
+                if (duplicatesData.length === 0) {
+                    showExcelStatus('<i class="fas fa-times-circle"></i> Nenhuma duplicata encontrada para baixar.', 'error');
+                    return;
+                }
+                
+                try {
+                    const content = duplicatesData.join('\n');
+                    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'duplicatas_encontradas.txt';
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // Cleanup
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }, 100);
+                    
+                } catch (error) {
+                    showExcelStatus(`<i class="fas fa-times-circle"></i> Erro ao gerar arquivo de duplicatas: ${error.message}`, 'error');
+                }
+            });
+            
+            clearExcelBtn.addEventListener('click', function() {
+                excelFileInput.value = '';
+                excelFileName.textContent = 'Nenhum arquivo selecionado';
+                excelStatus.style.display = 'none';
+                duplicatesContainer.style.display = 'none';
+                downloadTxtBtn.style.display = 'none';
+                downloadDuplicatesBtn.style.display = 'none';
+                processedExcelData = '';
+                duplicatesData = [];
+            });
+            
+            // TXT to JSON functionality
+            const txtFileInput = document.getElementById('txt-file');
+            const txtFileName = document.getElementById('txt-file-name');
+            const txtStatus = document.getElementById('txt-status');
+            
+            txtFileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                
+                // Reset status
+                txtStatus.style.display = 'none';
+                
+                if (file) {
+                    txtFileName.textContent = `Arquivo selecionado: ${file.name}`;
+                    processTxtFile(file);
+                } else {
+                    txtFileName.textContent = 'Nenhum arquivo selecionado';
+                }
+            });
+            
+            function processTxtFile(file) {
+                if (!file.name.endsWith('.txt')) {
+                    showTxtStatus('<i class="fas fa-exclamation-circle"></i> Por favor, selecione um arquivo .txt válido!', 'error');
+                    return;
+                }
+                
+                const environment = document.querySelector('input[name="ambiente"]:checked').value;
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        showTxtStatus('<i class="fas fa-cog fa-spin"></i> Processando arquivo...', 'info');
+                        
+                        const content = e.target.result;
+                        const lines = content.split('\n').filter(line => line.trim());
+                        
+                        // Environment configurations
+                        const config = {
+                            "producao": {
+                                "cnpjTransportador": "24657266000170",
+                                "cpfMotorista": "74455109072"
+                            },
+                            "homologacao": {
+                                "cnpjTransportador": "16784574000138",
+                                "cpfMotorista": "64473237044"
+                            }
+                        };
+                        
+                        // Process each line
+                        const cteItems = [];
+                        for (const line of lines) {
+                            const cleanLine = line.replace('R$', '').replace(/\./g, '').trim();
+                            const key = cleanLine.substring(0, 44);
+                            const value = cleanLine.substring(44).replace(',', '.').trim();
+                            
+                            cteItems.push(`{"chaveAcesso": "${key}", "valorFrete": ${parseFloat(value).toFixed(2)}}`);
+                        }
+                        
+                        // Build JSON manually
+                        let jsonContent = '{\n';
+                        jsonContent += `\t"cnpjTransportador": "${config[environment].cnpjTransportador}",\n`;
+                        jsonContent += `\t"cpfMotorista": "${config[environment].cpfMotorista}",\n`;
+                        jsonContent += '\t"cte": [\n';
+                        
+                        cteItems.forEach((item, index) => {
+                            jsonContent += `\t\t${item}${index < cteItems.length - 1 ? ',' : ''}\n`;
+                        });
+                        
+                        jsonContent += '\t],\n';
+                        jsonContent += '\t"tipoDocumentoFromCTe": "SUBCONTRATACAO",\n';
+                        jsonContent += '\t"naoGeraCTeSubcontratacao": true,\n';
+                        jsonContent += '\t"naoGeraCiot": true,\n';
+                        jsonContent += '\t"naoGeraMdfe": true,\n';
+                        jsonContent += '\t"placa": [\n';
+                        jsonContent += '\t\t"EMI1122"\n';
+                        jsonContent += '\t]\n';
+                        jsonContent += '}';
+                        
+                        // Generate output filename
+                        const suffix = environment === 'producao' ? '_producao.txt' : '_homologacao.txt';
+                        const outputName = file.name.replace('.txt', suffix);
+                        
+                        // Create and download file
+                        setTimeout(() => {
+                            downloadFile(jsonContent, outputName);
+                            showTxtStatus(`<i class="fas fa-check-circle"></i> Arquivo ${outputName} gerado com sucesso!`, 'success');
+                        }, 500);
+                        
+                    } catch (err) {
+                        showTxtStatus(`<i class="fas fa-times-circle"></i> Erro ao processar o arquivo: ${err.message}`, 'error');
+                        console.error(err);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    showTxtStatus('<i class="fas fa-times-circle"></i> Erro ao ler o arquivo.', 'error');
+                };
+                
+                reader.readAsText(file, 'UTF-8');
+            }
+            
+            function showTxtStatus(message, type) {
+                txtStatus.innerHTML = message;
+                txtStatus.className = type;
+                txtStatus.style.display = 'flex';
+            }
+            
+            function downloadFile(content, filename) {
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
+            }
+        });
+    </script>
+</body>
+</html>
